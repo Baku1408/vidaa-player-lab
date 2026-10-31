@@ -1,0 +1,134 @@
+/* VIDAA Player Lab — thème TV : gros contrastes, focus visible à la télécommande */
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0;
+  background: #0b0d12; color: #e8ecf3;
+  font-family: "Segoe UI", Arial, Helvetica, sans-serif;
+  font-size: 20px; line-height: 1.45;
+}
+body { padding-bottom: 60px; }
+
+#topbar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 18px;
+  padding: 14px 22px; background: #121722; border-bottom: 2px solid #23304a;
+}
+#topbar h1 { font-size: 26px; margin: 0; letter-spacing: .5px; }
+
+.badge {
+  display: inline-block; padding: 4px 12px; border-radius: 14px;
+  font-size: 16px; font-weight: 600; background: #333; color: #ddd;
+}
+.badge.ok  { background: #14532d; color: #86efac; }
+.badge.bad { background: #5b1a1a; color: #fca5a5; }
+.badge.warn{ background: #5b4a1a; color: #fde68a; }
+
+#main { padding: 18px 22px; max-width: 1400px; margin: 0 auto; }
+
+.panel {
+  background: #141a26; border: 1px solid #23304a; border-radius: 12px;
+  padding: 16px 20px; margin-top: 18px;
+}
+.panel h2 { font-size: 22px; margin: 0 0 12px; }
+.panel h3 { font-size: 19px; margin: 16px 0 8px; }
+.hint { color: #93a1b8; font-size: 16px; margin: 10px 0 0; }
+code { background: #0b0d12; padding: 1px 6px; border-radius: 4px; font-size: 16px; }
+
+/* ─── Zone vidéo ─── */
+#stage {
+  position: relative; background: #000;
+  border: 1px solid #23304a; border-radius: 10px; overflow: hidden;
+}
+#video { display: block; width: 100%; aspect-ratio: 16/9; background: #000; outline: none; }
+#video:focus { box-shadow: inset 0 0 0 4px #ffd400; }
+.hud {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  display: flex; gap: 22px; flex-wrap: wrap;
+  padding: 8px 14px; font-size: 17px; font-family: Consolas, monospace;
+  background: rgba(0,0,0,.68); color: #cfe6ff;
+}
+#spinner {
+  position: absolute; top: 50%; left: 50%; width: 64px; height: 64px;
+  margin: -32px 0 0 -32px; border: 6px solid rgba(255,255,255,.2);
+  border-top-color: #ffd400; border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+#stage-msg {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  text-align: center; padding: 30px; font-size: 22px; background: rgba(0,0,0,.82); color: #fecaca;
+}
+.hidden { display: none !important; }
+
+/* ─── Boutons ─── */
+.btnrow { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 6px; }
+.btn {
+  min-height: 58px; padding: 10px 22px;
+  font-size: 20px; font-weight: 600; color: #e8ecf3;
+  background: #1e2740; border: 2px solid #35456b; border-radius: 10px;
+  cursor: pointer; text-align: center;
+}
+.btn.small { min-height: 46px; font-size: 17px; padding: 6px 16px; }
+.btn.primary { background: #1d4ed8; border-color: #3b82f6; }
+.btn.yellow  { background: #7a5f00; border-color: #ffd400; color: #fff; font-size: 21px; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn:focus, .btn:focus-visible, [data-focus]:focus {
+  outline: 4px solid #ffd400; outline-offset: 3px;
+  background: #2f3d63;
+}
+.btn.yellow:focus { background: #8f7100; }
+
+/* ─── Statuts / tests / diagnostic ─── */
+.status {
+  margin-top: 12px; padding: 12px 16px; border-radius: 8px;
+  background: #0b0d12; border-left: 6px solid #35456b;
+  font-size: 18px; white-space: pre-wrap; word-break: break-word;
+}
+.status.ok   { border-left-color: #22c55e; }
+.status.bad  { border-left-color: #ef4444; background: #1d0f0f; }
+.status.warn { border-left-color: #eab308; background: #1c1707; }
+
+.tests { margin: 12px 0 0; padding-left: 30px; font-size: 18px; }
+.tests li { margin: 6px 0; }
+.tests .pass { color: #86efac; font-weight: 700; }
+.tests .fail { color: #fca5a5; font-weight: 700; }
+.tests .skip { color: #fde68a; font-weight: 700; }
+.tests .detail { color: #93a1b8; font-size: 16px; }
+
+.kv { width: 100%; border-collapse: collapse; font-size: 17px; margin-top: 8px; }
+.kv td { padding: 6px 10px; border-bottom: 1px solid #23304a; vertical-align: top; }
+.kv td:first-child { width: 38%; color: #93a1b8; font-family: Consolas, monospace; font-size: 16px; }
+.kv .y { color: #86efac; font-weight: 700; }
+.kv .n { color: #fca5a5; font-weight: 700; }
+.kv .w { color: #fde68a; font-weight: 700; }
+
+.log {
+  margin-top: 10px; max-height: 46vh; overflow: auto;
+  background: #070a10; border: 1px solid #23304a; border-radius: 8px;
+  padding: 10px; font-size: 15px; line-height: 1.5;
+  font-family: Consolas, "Courier New", monospace;
+  white-space: pre-wrap; word-break: break-all;
+}
+.log .t-error   { color: #fca5a5; }
+.log .t-warn    { color: #fde68a; }
+.log .t-success { color: #86efac; }
+
+/* ─── Toast ─── */
+.toast {
+  position: fixed; left: 50%; bottom: 46px; transform: translateX(-50%);
+  max-width: 640px; padding: 16px 24px; border-radius: 10px;
+  background: rgba(8,10,16,.96); border: 2px solid #35456b;
+  font-size: 20px; text-align: center; z-index: 50;
+}
+.toast.ok   { border-color: #22c55e; }
+.toast.bad  { border-color: #ef4444; }
+.toast.info { border-color: #3b82f6; }
+
+/* ─── Clavier écran ─── */
+.osk { position: fixed; inset: 0; background: rgba(0,0,0,.8); z-index: 60; display: flex; align-items: center; justify-content: center; }
+.osk-box { background: #141a26; border: 2px solid #35456b; border-radius: 12px; padding: 22px; width: min(760px, 92vw); }
+.osk-title { font-size: 20px; margin-bottom: 12px; }
+#osk-input {
+  width: 100%; font-size: 22px; padding: 14px; border-radius: 8px;
+  border: 2px solid #35456b; background: #070a10; color: #e8ecf3; margin-bottom: 16px;
+}
+#osk-input:focus { outline: 4px solid #ffd400; }

@@ -1,0 +1,36 @@
+VIDAA Player Lab — NOTICE d'attribution
+=======================================
+
+Ce prototype a été développé de zéro pour ce dépôt, à partir d'une ANALYSE
+du projet open source suivant :
+
+  Projet  : NoobyGains/stremio-vidaa-tv
+  URL     : https://github.com/NoobyGains/stremio-vidaa-tv
+  Licence : GPLv2 (selon le README du projet)
+  Fichiers analysés (non copiés) :
+    - patches/head/kernel/native-player.js   (handoff lecteur natif)
+    - patches/head/kernel/keys.js            (codes touches télécommande)
+    - patches/head/kernel/device.js          (APIs Hisense_* et omi_platform)
+    - tests/helpers.js, tests/buffering-honesty.spec.js (méthode de vérification)
+
+Ce qui est repris (protocole fonctionnel, non protégé par le droit d'auteur,
+et dont l'usage reste sous licence GPLv2 si vous redistribuez) :
+  - le nom du pont : window.omi_platform.sendPlatformMessage
+    (variante window.opera_omi.sendPlatformMessage)
+  - le contrat des trois messages de handoff :
+      {"type":"launchNativePlayer","url":…,"title":…,"mimeType":…}
+      {"type":"openMediaPlayer","url":…,"title":…}
+      {"type":"playVideo","url":…,"mimeType":…,"title":…}
+  - le principe de vérification « page passée en arrière-plan » (2 s),
+    seul critère de succès honnête admis par les auteurs de référence.
+
+Ce qui n'est PAS repris : aucun code source n'a été copié. Tous les fichiers
+de ce dépôt sont des écritures originales.
+
+Si vous redistribuez ce prototype (notamment sous forme modifiée), conservez
+cette NOTICE et indiquez clairement l'origine de la technique étudiée, la
+licence du projet de référence étant GPLv2.
+
+Dépendances tierces embarquées :
+  vendor/hls.min.js — hls.js v1.5.18, Apache License 2.0
+    https://github.com/video-dev/hls.js
