@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>VIDAA Player Lab</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="topbar">
+  <h1>VIDAA Player Lab</h1>
+  <div id="badges" aria-label="État de l'environnement">
+    <span class="badge" id="badge-https">HTTPS</span>
+    <span class="badge" id="badge-mse">MSE</span>
+    <span class="badge" id="badge-hls">HLS natif</span>
+    <span class="badge" id="badge-omi">omi_platform</span>
+    <span class="badge" id="badge-net">Réseau</span>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ═══════════ 1. ZONE VIDÉO ═══════════ -->
+  <section id="stage" aria-label="Zone de lecture">
+    <video id="video" tabindex="0" playsinline webkit-playsinline preload="metadata"></video>
+    <div id="hud" class="hud hidden">
+      <span id="hud-state">—</span>
+      <span id="hud-time">00:00 / 00:00</span>
+      <span id="hud-buf">buf 0.0 s</span>
+      <span id="hud-src">—</span>
+    </div>
+    <div id="spinner" class="hidden" aria-hidden="true"></div>
+    <div id="stage-msg" class="hidden"></div>
+  </section>
+
+  <!-- ═══════════ 2. TRANSPORT ═══════════ -->
+  <section class="panel" aria-label="Contrôles">
+    <h2>Contrôles</h2>
+    <div class="btnrow">
+      <button class="btn" data-focus id="btn-rw" data-key-hint="◀◀ / Ch-">⟲ 30 s</button>
+      <button class="btn primary" data-focus id="btn-play" data-key-hint="OK / 415 / 19">▶ Lecture / Pause</button>
+      <button class="btn" data-focus id="btn-ff" data-key-hint="▶▶ / Ch+">⟳ 30 s</button>
+      <button class="btn" data-focus id="btn-stop" data-key-hint="">■ Stop</button>
+      <button class="btn" data-focus id="btn-mute" data-key-hint="">🔊 Muet</button>
+      <button class="btn" data-focus id="btn-hud" data-key-hint="Info (457)">Écran info</button>
+    </div>
+    <p class="hint">Télécommande : flèches = déplacer le focus · OK = valider · dans la vidéo, ◀ ▶ = -10 s / +10 s ·
+      🟡 jaune = lecteur natif · 🔴 rouge = diagnostic · 🟢 vert = journal · Ch+ / Ch- = ±60 s</p>
+  </section>
+
+  <!-- ═══════════ 3. SOURCES ═══════════ -->
+  <section class="panel" aria-label="Sources de démonstration">
+    <h2>Sources de démonstration (HTTPS publiques)</h2>
+    <div class="btnrow" id="source-list"></div>
+    <div class="btnrow">
+      <button class="btn small" data-focus id="btn-custom-open">Ouvrir une URL…</button>
+      <span id="custom-url-display" class="hint"></span>
+    </div>
+  </section>
+
+  <!-- ═══════════ 4. LECTEUR NATIF ═══════════ -->
+  <section class="panel" aria-label="Lecteur natif Hisense">
+    <h2>Lecteur natif Hisense (handoff)</h2>
+    <div class="btnrow">
+      <button class="btn yellow" data-focus id="btn-native"> Essayer le lecteur natif Hisense</button>
+    </div>
+    <div id="native-status" class="status" role="status">
+      Non testé.
+    </div>
+    <p class="hint">
+      Cette fonction envoie des messages à <code>omi_platform.sendPlatformMessage</code> (pont Opera/Vewd VIDAA).
+      <strong>Aucun accusé de réception n'existe</strong> : la réussite n'est acceptée que si la page est
+      réellement passée en arrière-plan dans les 2 s. Sinon l'échec est affiché tel quel.
+    </p>
+  </section>
+
+  <!-- ═══════════ 5. TESTS ═══════════ -->
+  <section class="panel" aria-label="Tests de lecture">
+    <h2>Tests de lecture</h2>
+    <div class="btnrow">
+      <button class="btn primary" data-focus id="btn-run-tests">▶ Lancer les tests (pause, avance, reprise)</button>
+      <button class="btn small" data-focus id="btn-clear-tests">Effacer</button>
+    </div>
+    <ol id="test-results" class="tests"></ol>
+    <p class="hint">La « reprise » est validée en deux temps : le test mémorise une position, puis un
+      rechargement de la page doit reprendre exactement à cette position (le test passe au prochain chargement).</p>
+  </section>
+
+  <!-- ═══════════ 6. DIAGNOSTIC ═══════════ -->
+  <section class="panel hidden" id="panel-diag" aria-label="Diagnostic">
+    <h2>Diagnostic <span class="hint">(touche rouge)</span></h2>
+    <div class="btnrow">
+      <button class="btn small" data-focus id="btn-diag-refresh">Rafraîchir</button>
+      <button class="btn small" data-focus id="btn-diag-cors">Tester l'accès réseau (CORS)</button>
+      <button class="btn small" data-focus id="btn-diag-keys">Voir les dernières touches</button>
+    </div>
+    <table id="diag-table" class="kv"></table>
+    <h3>Verdict de lecture</h3>
+    <div id="diag-verdict" class="status">—</div>
+  </section>
+
+  <!-- ═══════════ 7. JOURNAL ═══════════ -->
+  <section class="panel hidden" id="panel-log" aria-label="Journal">
+    <h2>Journal des événements <span class="hint">(touche verte)</span></h2>
+    <div class="btnrow">
+      <button class="btn small" data-focus id="btn-log-clear">Vider</button>
+      <button class="btn small" data-focus id="btn-log-all">Tout sélectionner (copie)</button>
+    </div>
+    <pre id="log-output" class="log"></pre>
+  </section>
+
+</main>
+
+<div id="toast" class="toast hidden" role="alert"></div>
+
+<!-- Clavier écran minimal (ouverture URL personnalisée) -->
+<div id="osk" class="osk hidden" role="dialog" aria-label="Saisie URL">
+  <div class="osk-box">
+    <div class="osk-title">URL du flux (HTTPS uniquement)</div>
+    <input id="osk-input" type="text" inputmode="url" spellcheck="false" placeholder="https://…">
+    <div class="btnrow">
+      <button class="btn primary" id="osk-ok">Valider</button>
+      <button class="btn" id="osk-cancel">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script src="vendor/hls.min.js"></script>
+<script src="js/log.js"></script>
+<script src="js/sources.js"></script>
+<script src="js/native-handoff.js"></script>
+<script src="js/player.js"></script>
+<script src="js/keys.js"></script>
+<script src="js/diagnostics.js"></script>
+<script src="js/tests.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
