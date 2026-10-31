@@ -1,7 +1,11 @@
 # VIDAA Player Lab — prototype de lecteur pour Hisense VIDAA 9
 
 Prototype web **sans PC ni téléphone allumé**, sans achat, sans modifier le
-firmware. Deux lecteurs à comparer sur votre télévision :
+firmware. Il joue vos films/séries **Xtream Codes** (abonnement IPTV personnel)
+avec un lecteur HTML5, après un **diagnostic d'accès en 6 étapes** qui
+identifie la cause unique d'un blocage (HTTPS, CORS, authentification…).
+
+Deux lecteurs à comparer sur votre télévision :
 
 1. **Lecteur HTML5** (MP4 direct + HLS via natif ou `hls.js`)
 2. **Lecteur natif Hisense** (« handoff » via `omi_platform.sendPlatformMessage`)
@@ -28,26 +32,51 @@ vidaa-player/
 ├── .nojekyll           # force GitHub Pages à servir les fichiers bruts
 ├── NOTICE              # attribution de licence (obligatoire à la redistribution)
 ├── README.md           # ce guide
-├── ARCHITECTURE.md     # suite prévue : Xtream Codes (pas encore intégré)
+├── ARCHITECTURE.md     # contrats internes (dont CORS/relais personnel)
 ├── js/
-│   ├── log.js          # journal horodaté + erreurs globales
-│   ├── sources.js      # 4 sources HTTPS publiques vérifiées
+│   ├── log.js          # journal horodaté + erreurs globales + redaction
+│   ├── sources.js      # sources HTTPS publiques vérifiées
 │   ├── native-handoff.js  # handoff lecteur natif (honnête, vérifié)
 │   ├── player.js       # lecteur MP4/HLS, détection de blocages, reprise
 │   ├── keys.js         # télécommande (codes + navigation focus)
 │   ├── diagnostics.js  # diagnostic codec/CORS/pont/verdict
 │   ├── tests.js        # suite de tests (pause, avance, reprise…)
+│   ├── secure.js       # coffre chiffré AES-GCM 256 (identifiants Xtream)
+│   ├── xtream.js       # client Xtream Codes + diagnostic d'accès 6 étapes
+│   ├── xtream-ui.js    # panneau Xtream (formulaire, catalogue, rapport)
 │   └── app.js          # assemblage
 └── vendor/hls.min.js   # hls.js v1.5.18 embarqué (aucun CDN requis)
 ```
 
-Aucune dépendance réseau externe au fonctionnement (hors vidéos de démo) :
-l'application fonctionne si votre PC et votre téléphone sont éteints, tant que
-la TV a Internet.
+Aucune dépendance réseau externe au fonctionnement (hors vidéos de démo et
+votre serveur Xtream) : l'application fonctionne si votre PC et votre
+téléphone sont éteints, tant que la TV a Internet.
 
 ---
 
-## 2. Hébergement GRATUIT (5 minutes)
+## 2. Vos identifiants Xtream — règles appliquées
+
+**Vos identifiants ne quittent jamais votre télévision** :
+
+- Chiffrés localement (AES-GCM 256, clé dérivée de votre phrase secrète via
+  PBKDF2-SHA-256, 150 000 itérations) dans le stockage local de la TV —
+  la phrase secrète **n'est jamais stockée** : elle est à retaper à chaque
+  rechargement.
+- **Jamais** écrits dans le code, les journaux (chaque ligne passe par une
+  redaction qui masque `password=`/`username=` et les chemins
+  `/movie|series|live/user/pass/`), ni dans les rapports de lecture.
+- **Jamais** publiés sur GitHub : le coffre et le rapport formats vivent
+  uniquement dans le localStorage de la TV.
+- **Aucun proxy tiers** : la TV parle directement à **votre** serveur. Seul
+  remède CORS documenté : **votre propre relais personnel** (voir
+  `ARCHITECTURE.md`) — jamais un service tiers qui verrait vos identifiants.
+- Si le navigateur TV n'offre pas WebCrypto (page non sécurisée), le coffre
+  est **refusé** : les identifiants ne sont alors valables que pour la
+  session en cours, en mémoire.
+
+---
+
+## 3. Hébergement GRATUIT (5 minutes)
 
 ### Option A — GitHub Pages (recommandé)
 
@@ -72,15 +101,22 @@ actuellement non installé sur ce PC.)*
 
 Les deux offres sont **HTTPS** (indispensable) et gratuites.
 
+> ⚠️ **Point d'attention HTTPS ↔ Xtream HTTP** : GitHub Pages sert l'app en
+> HTTPS. Si **votre serveur Xtream est en HTTP**, le navigateur bloquera
+> l'accès (« contenu mixte ») — c'est précisément ce que l'étape 2 du
+> diagnostic détecte et explique. Options : serveur Xtream déjà en HTTPS,
+> reverse-proxy HTTPS personnel devant lui, ou héberger l'app en HTTP sur
+> votre propre machine (LAN). Le diagnostic vous dira lequel s'applique.
+
 ---
 
-## 3. Ouvrir sur la TV Hisense VIDAA 9
+## 4. Ouvrir sur la TV Hisense VIDAA 9
 
 ### Méthode 1 — Navigateur Internet de la TV (30 s)
 
 1. TV : *Accueil → Apps → Browser* (Internet Browser).
 2. Saisissez votre URL GitHub Pages, **marquez-la en favori**.
-3. Testez (checklist §4).
+3. Testez (checklist §5).
 
 ### Méthode 2 — Tuile permanente avec Sidee (déjà installé chez vous)
 
@@ -102,7 +138,9 @@ Les deux offres sont **HTTPS** (indispensable) et gratuites.
 
 ---
 
-## 4. Checklist de test sur la télévision
+## 5. Checklist de test sur la télévision
+
+### 5a. Lecteur & télécommande
 
 À faire dans l'ordre, **puis envoyez-moi le journal** (panneau 🟢 →
 « Tout sélectionner ») :
@@ -120,13 +158,43 @@ Les deux offres sont **HTTPS** (indispensable) et gratuites.
 | 9 | Touche 🟢 vert | journal complet à copier |
 | 10 | Ouvrir la même URL **depuis la tuile Sidee** | comparer badge `omi_platform` + retest 🟡 |
 
+> **Sintel MP4** : sur votre TV, cette source a échoué (contrairement aux
+> autres démos). Si le même échec se reproduit, utilisez la source
+> « MP4 · Big Buck Bunny (test-videos) » qui sert un fichier H.264/AAC
+> classique vérifié — si elle passe, le souci est propre au fichier Sintel,
+> pas au lecteur.
+
+### 5b. Connexion Xtream (vos films)
+
+| # | Action | Résultat attendu |
+|---|--------|------------------|
+| 11 | Panneau **Xtream** : saisir serveur + utilisateur + mot de passe | champs acceptés (clavier TV : les flèches ne bougent plus le focus dans un champ) |
+| 12 | « 🔬 Tester la connexion (6 étapes) » | voir ci-dessous selon le verdict |
+| 13 | « 🔐 Enregistrer chiffré » + phrase secrète | coffre verrouillé ; à la rechargement : « Déverrouiller » avec la phrase |
+| 14 | 🎬 Films → catégorie → film → **▶ Lire** | lecture ; ligne « metadata OK » dans le rapport Formats |
+| 15 | Un film **.mkv** (si votre fournisseur en a) | échec **affiché tel quel** (code 4) dans le rapport — c'est normal en HTML5 |
+| 16 | ⚙ Rapport Formats & codecs → « Effacer » puis renvoyer le tableau | preuve des conteneurs/codecs que VOTRE fournisseur sert réellement |
+
+**Verdicts du diagnostic (6 étapes, une cause identifiée à la fois)** :
+
+| Verdict | Signification |
+|---------|---------------|
+| « TOUT EST BON » | API lisible, identifiants valides — passez au catalogue |
+| « BLOCAGE HTTPS (mixed content) » | page HTTPS + serveur HTTP → options expliquées à l'écran |
+| « Serveur injoignable ou trop lent » | URL/port/serveur : vérifiez avec `curl` depuis le PC |
+| « BLOCAGE CORS sur l'API » | l'API est joignable mais illisible sans en-tête CORS — **la lecture MP4 directe reste testable** ; remède : votre relais personnel uniquement |
+| « Réseau INTERCEPTÉ (proxy) » | un proxy/VPN répond à votre place → refaites le test directement sur la TV |
+| « Identifiants refusés » | réseau et CORS bons → erreur de saisie ou abonnement expiré |
+| « Réponse illisible (non-JSON) » | l'URL pointe vers un panel/admin, pas la racine du panel client |
+
 **Signes d'erreur à relever** : code `MEDIA_ERR_NETWORK (3)` = CORS/HTTPS/serveur,
-`MEDIA_ERR_SRC_NOT_SUPPORTED (4)` = codec/format, message « BLOCAGE DÉTECTÉ » =
-le flux ne progresse plus (réseau lent ou débordement du décodeur).
+`MEDIA_ERR_SRC_NOT_SUPPORTED (4)` = codec/format (ex. conteneur MKV), message
+« BLOCAGE DÉTECTÉ » = le flux ne progresse plus (réseau lent ou débordement
+du décodeur).
 
 ---
 
-## 5. Touches télécommande
+## 6. Touches télécommande
 
 | Touche | Effet |
 |--------|-------|
@@ -146,15 +214,29 @@ le flux ne progresse plus (réseau lent ou débordement du décodeur).
 > confirmés sur votre firmware** : le panneau 🔴 → « Voir les dernières
 > touches » affiche le **code brut réellement reçu** — envoyez-le-moi et
 > j'ajusterai la table.
+>
+> Dans les champs de saisie (identifiants Xtream), les flèches/OK/espace
+> servent au clavier écran TV et **ne déplacent jamais le focus** ; la touche
+> Retour quitte d'abord le champ.
 
 ---
 
-## 6. Test local sur PC (avant publication)
+## 7. Test local sur PC (avant publication)
 
 ```powershell
 cd C:\Users\vdali\Documents\Projet-IPTV\vidaa-player
 python -m http.server 8090
 # puis : http://127.0.0.1:8090  dans un navigateur
+```
+
+Pour tester la connexion Xtream **sans toucher à vos vrais accès**, un mock
+local (utilisateur/mot de passe fictifs) est fourni :
+
+```powershell
+cd C:\Users\vdali\Documents\Projet-IPTV
+python tools\mock_xtream.py
+# serveur fictif sur http://127.0.0.1:8091 — scénarios :
+#   http://127.0.0.1:8091/__scenario?set=ok|nocors|auth|html|timeout|nomedia
 ```
 
 Rappels : en HTTP, l'application affichera `HTTP ✗` et un avertissement —
@@ -163,23 +245,30 @@ fonctionne, le pont `omi_platform` est absent hors TV (affiché, pas masqué).
 
 ---
 
-## 7. Dépannage
+## 8. Dépannage
 
 | Symptôme | Cause probable / action |
 |----------|--------------------------|
 | Page blanche | Onglet console (F12 sur PC) → erreur JS ; vérifiez que tous les fichiers `js/` sont bien uploadés |
 | `HTTP ✗` rouge | L'URL n'est pas HTTPS → utilisez l'URL GitHub Pages/Pages complète |
-| « omi_platform ✗ » | Contexte sans pont → tester depuis la tuile Sidee (§3) |
+| « omi_platform ✗ » | Contexte sans pont → tester depuis la tuile Sidee (§4) |
 | Test reprise FAIL « timeout:playing » | Le navigateur a bloqué l'autoplay → appuyez d'abord sur ▶ manuellement puis relancez les tests |
 | HLS ne démarre pas | Journal 🟢 : cherchez `hls.js erreur` (réseau/CORS) ou `bascule` (natif défaillant) |
 | Rien ne répond à la télécommande | 🔴 → « Voir les dernières touches » : si le journal est vide, le navigateur n'émet pas `keydown` — signalez-le |
+| Xtream : « BLOCAGE CORS » | Le serveur n'autorise pas cette origine → MP4 direct testable quand même ; pour l'inventaire/HLS : **votre** relais personnel (`ARCHITECTURE.md`), pas un service tiers |
+| Xtream : catalogue vide après verdict bon | Recliquez 🎬 Films / 📺 Séries (le diagnostic ne charge pas le catalogue automatiquement) |
+| Coffre « INDISPONIBLE » | WebCrypto absent (page non sécurisée ?) → l'app refuse de stocker les identifiants ; usage session uniquement |
+| Mot de passe oublié | « Oublier les identifiants » efface le coffre ; ressaisir les accès depuis votre panneau fournisseur |
 
 ---
 
-## 8. Ce que cette version NE fait PAS (volontairement)
+## 9. Ce que cette version NE fait PAS (volontairement)
 
-- Pas d'interface type Netflix / catalogue / favors (à faire **après**
-  validation de la lecture sur la vraie télévision).
-- Pas d'intégration Xtream Codes (architecture prévue : `ARCHITECTURE.md`).
+- Pas d'interface type Netflix / catalogue rich-media / favoris (à faire
+  **après** validation de la lecture de vos vrais films sur la télévision).
+- Pas de proxy ou service tiers : aucun code n'envoie vos identifiants
+  ailleurs que vers votre serveur.
 - Aucune promesse de succès du lecteur natif : l'échec est un résultat
   normal et affiché comme tel.
+- Pas de stockage en clair : si le coffre chiffré est indisponible,
+  l'application préfère ne rien retenir.

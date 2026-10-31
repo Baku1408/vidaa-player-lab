@@ -75,6 +75,70 @@
     </p>
   </section>
 
+  <!-- ═══════════ 4bis. XTREAM CODES ═══════════ -->
+  <section class="panel" aria-label="Xtream Codes">
+    <h2>Xtream Codes — accès à vos films et séries</h2>
+    <p class="hint">
+      <strong>Vos identifiants restent sur cette TV</strong> : chiffrés (AES-GCM 256, clé dérivée de votre phrase
+      secrète) dans le stockage local, jamais écrits dans le code, les journaux, ni publiés sur GitHub.
+      Aucun proxy tiers : l'appareil parle directement à <strong>votre</strong> serveur.
+      Voir la section « Étapes du diagnostic » pour séparer les blocages HTTPS / CORS / authentification.
+    </p>
+
+    <div class="xt-grid">
+      <label class="xt-field">
+        <span>Serveur (racine du panel)</span>
+        <input id="xt-server" type="url" inputmode="url" spellcheck="false" autocomplete="off"
+               placeholder="http://ma-iptv.ddns.net:8080">
+      </label>
+      <label class="xt-field">
+        <span>Utilisateur</span>
+        <input id="xt-user" type="text" spellcheck="false" autocomplete="off">
+      </label>
+      <label class="xt-field">
+        <span>Mot de passe</span>
+        <input id="xt-pass" type="password" spellcheck="false" autocomplete="off">
+      </label>
+      <label class="xt-field">
+        <span>Phrase secrète (chiffrement local — non stockée)</span>
+        <input id="xt-phrase" type="password" spellcheck="false" autocomplete="new-password" placeholder="6 car. min.">
+      </label>
+    </div>
+
+    <div class="btnrow">
+      <button class="btn primary" data-focus id="btn-xt-diag">🔬 Tester la connexion (6 étapes)</button>
+      <button class="btn" data-focus id="btn-xt-save">🔐 Enregistrer chiffré sur la TV</button>
+      <button class="btn" data-focus id="btn-xt-unlock">🔓 Déverrouiller le coffre</button>
+      <button class="btn" data-focus id="btn-xt-forget">Oublier les identifiants</button>
+    </div>
+    <div id="xt-vault" class="status">Coffre : état inconnu (initialisation…).</div>
+
+    <h3>Diagnostic d'accès <span class="hint">(étape par étape — cause unique identifiée)</span></h3>
+    <ol id="xt-steps" class="tests"></ol>
+    <div id="xt-verdict" class="status">Non testé.</div>
+
+    <h3>Catalogue</h3>
+    <div class="btnrow">
+      <button class="btn" data-focus id="btn-xt-vod">🎬 Films</button>
+      <button class="btn" data-focus id="btn-xt-series">📺 Séries</button>
+      <button class="btn" data-focus id="btn-xt-live">📡 Direct (TV)</button>
+    </div>
+    <div id="xt-msg" class="status">Choisissez une source ci-dessus (après un diagnostic réussi).</div>
+    <div id="xt-cats" class="btnrow hidden"></div>
+    <div id="xt-items" class="btnrow hidden"></div>
+    <div id="xt-detail" class="status hidden"></div>
+
+    <h3>Formats &amp; codecs réellement servis</h3>
+    <table id="xt-report" class="kv"></table>
+    <div class="btnrow">
+      <button class="btn small" data-focus id="btn-xt-report-clear">Effacer le rapport</button>
+    </div>
+    <h3>Capacités déclarées par ce navigateur</h3>
+    <table id="xt-codecs" class="kv"></table>
+    <p class="hint">Le rapport s'alimente à chaque essai de lecture (réussi ou non) : c'est la preuve
+      concrète des conteneurs/codecs que votre fournisseur propose et que la TV accepte (ou refuse).</p>
+  </section>
+
   <!-- ═══════════ 5. TESTS ═══════════ -->
   <section class="panel" aria-label="Tests de lecture">
     <h2>Tests de lecture</h2>
@@ -134,6 +198,9 @@
 <script src="js/keys.js"></script>
 <script src="js/diagnostics.js"></script>
 <script src="js/tests.js"></script>
+<script src="js/secure.js"></script>
+<script src="js/xtream.js"></script>
+<script src="js/xtream-ui.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

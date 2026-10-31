@@ -100,7 +100,7 @@
 
     r.push(['— État du lecteur —', null, 'HEAD']);
     if (v) {
-      r.push(['src courant', (v.currentSrc || v.src || '(aucun)').substring(0, 160)]);
+      r.push(['src courant', window.VLog.redact((v.currentSrc || v.src || '(aucun)').substring(0, 160))]);
       r.push(['readyState / networkState', v.readyState + ' / ' + v.networkState]);
       r.push(['paused / ended / seeking', v.paused + ' / ' + v.ended + ' / ' + v.seeking]);
       r.push(['currentTime / duration', window.VPlayer.fmt(v.currentTime) + ' / ' + window.VPlayer.fmt(v.duration)]);

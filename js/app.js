@@ -47,7 +47,12 @@
   function loadSource(src, opts) {
     opts = opts || {};
     L('info', 'Source demandée : ' + src.label + ' — ' + src.url);
-    try { localStorage.setItem(LS_LAST, JSON.stringify({ id: src.id || 'custom', url: src.url })); } catch (e) {}
+    // Un flux Xtream contient identifiants dans l'URL → jamais persisté en clair.
+    if (window.VSources.hasEmbeddedCredentials(src.url)) {
+      L('info', 'Dernière source NON mémorisée (URL Xtream avec identifiants).');
+    } else {
+      try { localStorage.setItem(LS_LAST, JSON.stringify({ id: src.id || 'custom', url: src.url })); } catch (e) {}
+    }
     return window.VPlayer.load(src, opts).catch(function (err) {
       if (String(err.message).indexOf('timeout') === -1 && String(err.message) !== 'hls-unsupported') {
         toast('Chargement échoué : ' + err.message, 'bad');
@@ -82,7 +87,7 @@
       kids[i].style.boxShadow = '';
     }
     var disp = $('custom-url-display');
-    if (disp) disp.textContent = src ? ('URL : ' + src.url.substring(0, 90)) : '';
+    if (disp) disp.textContent = src ? ('URL : ' + window.VLog.redact(src.url.substring(0, 90))) : '';
   }
 
   function pickSource(s, btn) {
@@ -246,7 +251,11 @@
           L('error', 'URL non-HTTPS refusée : ' + url);
           return;
         }
-        window.VSources.setCustom(url);
+        if (window.VSources.hasEmbeddedCredentials(url)) {
+          L('info', 'URL personnalisée avec identifiants : non conservée entre les sessions.');
+        } else {
+          window.VSources.setCustom(url);
+        }
         var src = { id: 'custom', label: 'URL perso', type: window.VSources.isHls(url) ? 'hls' : 'mp4', url: url };
         markActive(src);
         loadSource(src).catch(function () {});
@@ -327,6 +336,10 @@
         markActive(first);
         L('info', 'Source de démonstration chargée — appuyez sur ▶ ou OK pour lire.');
         toast('Prêt. ▶ ou OK pour démarrer la lecture.', 'info', 7000);
+        // Un test de reprise peut être en attente même sans dernière source
+        // mémorisée (URL Xtream jamais persistées) : on tente quand même,
+        // sinon la 9e ligne du rapport resterait « EN ATTENTE » à vie.
+        window.VPlayer.attemptResume();
       }).catch(function (e) { L('warn', 'chargement initial: ' + e.message); });
     }
 
@@ -336,6 +349,9 @@
       if (b) { try { b.focus(); } catch (e) {} }
     }, 400);
   }
+
+  // Exposition pour les modules chargés avant app.js (xtream-ui).
+  window.VApp = { toast: toast, loadSource: loadSource, togglePanel: togglePanel };
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

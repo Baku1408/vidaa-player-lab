@@ -29,6 +29,13 @@
       note: 'H.264 + AAC, ~2 min — idéal pour les tests de pause/avance/reprise.'
     },
     {
+      id: 'bbb-mp4',
+      label: 'MP4 · Big Buck Bunny 1080p',
+      type: 'mp4',
+      url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/1080/Big_Buck_Bunny_1080_10s_30MB.mp4',
+      note: 'H.264 1080p, 10 s — source de remplacement (206 vérifié) si une démo échoue sur la TV.'
+    },
+    {
       id: 'mux-hls',
       label: 'HLS · Mux test (multi-débit)',
       type: 'hls',
@@ -45,6 +52,19 @@
   ];
 
   var LS_CUSTOM = 'vidaa_lab_custom_url';
+
+  /**
+   * Vrai si l'URL contient des identifiants en chemin (format Xtream
+   * /movie|series|live/utilisateur/motdepasse/…) ou en userinfo
+   * (scheme://user:pass@host). Ces URL ne doivent être ni journalisées en
+   * clair, ni persistées dans localStorage (cf. app.js / player.js).
+   */
+  function hasEmbeddedCredentials(url) {
+    var u = String(url || '');
+    if (/\/(movie|series|live|downloads)\/[^\/\s"'?]+\/[^\/\s"'?]+\//i.test(u)) return true;
+    if (/^[a-z][a-z0-9+.-]*:\/\/[^\/\s@]+@/i.test(u)) return true;
+    return false;
+  }
 
   window.VSources = {
     list: function () { return SOURCES.slice(); },
@@ -63,6 +83,7 @@
     },
     isHttps: function (url) {
       return /^https:\/\//i.test(String(url || ''));
-    }
+    },
+    hasEmbeddedCredentials: hasEmbeddedCredentials
   };
 })();

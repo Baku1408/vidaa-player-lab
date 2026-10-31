@@ -98,6 +98,20 @@
       return;
     }
 
+    // Champ de saisie actif (identifiants Xtream…) : flèches/OK/espace servent
+    // à l'éditeur de texte (clavier TV) — on n'y déplace JAMAIS le focus.
+    var typingEl = document.activeElement;
+    var typing = typingEl && typingEl.tagName === 'INPUT';
+    if (typing && (name === 'left' || name === 'right' || name === 'up' ||
+                   name === 'down' || name === 'ok' || name === 'space')) {
+      return;                       // ni preventDefault, ni navigation : saisie
+    }
+    if (typing && name === 'back') {
+      try { typingEl.blur(); } catch (err) {}
+      e.preventDefault();
+      return;                       // Retour = quitter le champ d'abord
+    }
+
     var handled = false;
     var fns = name ? (handlers[name] || []) : [];
     if (fns.length) {

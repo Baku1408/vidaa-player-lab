@@ -11,6 +11,7 @@
   var video, hls = null, current = null;   // current = source courante {id,label,type,url}
   var lastAdvanceAt = 0, lastTime = -1, stalled = false, playing = false;
   var watchers = [];
+  var stallRecoveries = 0, netRetried = 0, lastRecoveryAt = 0;   // anti-blocage (stabilité TV)
 
   function L(level, msg, data) { window.VLog.log(level, 'player', msg, data); }
 
@@ -115,6 +116,7 @@
     destroyHls();
     clearNativeGuard();
     current = src;
+    stallRecoveries = 0; netRetried = 0; lastRecoveryAt = 0;   // nouveaux compteurs par source
     var url = src.url;
     var res = pickMode(url);
     L('info', 'Chargement « ' + src.label + ' » — mode ' + res.mode + ' (' + res.why + ')');
@@ -137,6 +139,7 @@
         enableWorker: true,
         lowLatencyMode: false,
         maxBufferLength: 30,
+        backBufferLength: 30,             // borne le buffer arrière → mémoire TV
         manifestLoadingMaxRetry: 3,
         fragLoadingMaxRetry: 4
       });
@@ -251,6 +254,19 @@
     var txt = ERR_TEXT[code] || ('Erreur média inconnue (code ' + code + ')');
     if (e && e.message) txt += ' — ' + e.message;
     L('error', 'ERREUR VIDÉO : ' + txt, { src: (video.currentSrc || video.src || '').substring(0, 140) });
+
+    // Réseau (code 3) sur un flux progressif : UNE nouvelle tentative après 2 s,
+    // position conservée. Au-delà, l'erreur reste affichée telle quelle.
+    if (code === 3 && !hls && !netRetried && current) {
+      netRetried = true;
+      L('warn', 'Erreur réseau (MEDIA_ERR_NETWORK) → nouvelle tentative unique dans 2 s…');
+      failStage('Erreur réseau — nouvelle tentative automatique en cours…');
+      emit('video-error', { code: code, message: e ? e.message : '', retrying: true });
+      setTimeout(function () { reloadKeepingPosition(); }, 2000);
+      updateHud();
+      return;
+    }
+
     failStage(txt);
     emit('video-error', { code: code, message: e ? e.message : '' });
     updateHud();
@@ -260,8 +276,85 @@
     var t = video.currentTime;
     if (Math.abs(t - lastTime) > 0.25) {
       lastTime = t; lastAdvanceAt = Date.now();
-      if (stalled) { stalled = false; showSpinner(false); emit('stall-end', { recovered: true }); }
+      if (stalled) {
+        stalled = false; showSpinner(false);
+        // On ne proclame « rétabli » que si la source n'est pas en erreur :
+        // un flux refusé (codec/conteneur) peut émettre des timeupdate sans
+        // jamais vraiment jouer — ce serait un faux succès.
+        if (video.error) {
+          L('warn', 'Progression détectée mais la source reste en erreur — pas de rétablissement.');
+        } else {
+          L('success', 'Lecture rétablie après blocage (position ' + fmt(t) + ').');
+          emit('stall-end', { recovered: true });
+        }
+      }
+      stallRecoveries = 0;                  // progression = récupération confirmée
     }
+  }
+
+  /**
+   * Récupération anti-blocage (stabilité sur TV) — tentatives ordonnées :
+   *  1. micro-seek dans le buffer déjà téléchargé (déblocage décodeur),
+   *  2. saut vers la fin du buffer disponible,
+   *  3. dernier recours : rechargement de la source avec restauration de la
+   *     position (une seule fois par source).
+   * Chaque tentative est journalisée ; au-delà de 3, on laisse l'erreur
+   * affichée honnêtement.
+   */
+  function attemptStallRecovery(reason) {
+    lastRecoveryAt = Date.now();
+    if (stallRecoveries >= 3) {
+      L('error', 'Blocage persistant après 3 tentatives de récupération — aucun nouveau essai. ' +
+        'Diagnostic réseau/codec à faire (Journal + Diagnostic).');
+      return;
+    }
+    stallRecoveries++;
+    var ahead = bufferedAhead();
+    var strategy = '';
+
+    if (ahead > 1 && stallRecoveries === 1) {
+      strategy = 'micro-seek dans le buffer (' + ahead.toFixed(1) + ' s disponibles)';
+      try { video.currentTime = video.currentTime + 0.5; } catch (e) {}
+    } else if (ahead > 1) {
+      strategy = 'saut vers la fin du buffer';
+      try {
+        var b = video.buffered;
+        for (var i = 0; i < b.length; i++) {
+          if (video.currentTime >= b.start(i) - 0.5 && video.currentTime <= b.end(i)) {
+            video.currentTime = Math.max(b.start(i) + 0.1, b.end(i) - 0.5);
+            break;
+          }
+        }
+      } catch (e) {}
+    } else if (!hls && !netRetried && stallRecoveries >= 2) {
+      strategy = 'rechargement complet avec restauration de la position';
+      netRetried = true;
+      reloadKeepingPosition();
+    } else {
+      strategy = 'attente du réseau (buffer vide) — nouvelle tentative dans ~7 s';
+      lastAdvanceAt = Date.now() - STALL_MS;   // provoque une nouvelle évaluation
+    }
+    L('warn', 'Récupération anti-blocage n°' + stallRecoveries + ' (' + reason + ') : ' + strategy);
+    emit('stall-recovery', { attempt: stallRecoveries, strategy: strategy });
+  }
+
+  /** Recharge la source en conservant la position (dernier recours). */
+  function reloadKeepingPosition() {
+    if (!current) return;
+    var keep = video.currentTime;
+    var wasPlaying = !video.paused;
+    L('warn', 'Rechargement de la source à ' + fmt(keep) + ' s…');
+    try {
+      video.load();
+      var onMeta = function () {
+        video.removeEventListener('loadedmetadata', onMeta);
+        try { video.currentTime = keep; } catch (e) {}
+        showStageMsg('');
+        if (wasPlaying) { var p = video.play(); if (p && p.catch) p.catch(function () {}); }
+        L('info', 'Rechargement terminé, position restaurée à ' + fmt(keep) + ' s.');
+      };
+      video.addEventListener('loadedmetadata', onMeta);
+    } catch (e) { L('error', 'Rechargement impossible : ' + e.message); }
   }
 
   /** Boucle de surveillance des blocages (1 s). */
@@ -279,7 +372,10 @@
           buffered: bufferedAhead(), readyState: video.readyState,
           networkState: video.networkState, time: video.currentTime
         });
-        showStageMsg('Blocage de lecture détecté — voir le Journal (touche 🟢).');
+        showStageMsg('Blocage détecté — récupération automatique en cours…');
+        attemptStallRecovery('détection');
+      } else if (now - lastRecoveryAt > 7000) {
+        attemptStallRecovery('toujours bloqué');
       }
     }
     updateHud();
@@ -376,6 +472,11 @@
 
   // ─── Reprise (test en deux temps) ───────────────────────────────────────
   function saveResume(tag) {
+    if (window.VSources && window.VSources.hasEmbeddedCredentials(currentUrl())) {
+      L('info', 'Position NON mémorisée : ce flux Xtream embarque les identifiants dans son URL ' +
+        '(ils ne seront jamais écrits dans localStorage).');
+      return false;
+    }
     try {
       localStorage.setItem(LS_POS, JSON.stringify({
         url: currentUrl(), t: video.currentTime, tag: tag || 'manual', at: Date.now()

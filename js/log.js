@@ -13,6 +13,22 @@
   }
 
   /**
+   * Redaction — appliquée à TOUS les messages avant stockage/affichage.
+   * Supprime : password=/username= dans les URL, identifiants en chemin
+   * (/movie/user/pass/), le paramètre target= des relais, user:pass@host.
+   * Un identifiant ne doit JAMAIS apparaître dans le journal, ni à l'écran.
+   */
+  function redact(s) {
+    if (s === null || s === undefined) return s;
+    s = String(s);
+    return s
+      .replace(/([?&](?:password|pass|pwd|username|user|token|auth)=)[^&\s"']+/gi, '$1•••')
+      .replace(/\/(movie|series|live|downloads)\/[^\/\s"'?]+\/[^\/\s"'?]+\//gi, '/$1/•••/•••/')
+      .replace(/([?&]target=)[^&\s"']+/gi, '$1•••')
+      .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\/\s@]+@/gi, '$1•••@');
+  }
+
+  /**
    * log(level, cat, message[, data])
    *  level: 'info' | 'warn' | 'error' | 'success' | 'debug'
    *  cat:   courte étiquette ('player', 'native', 'keys', 'test', 'diag'…)
@@ -29,6 +45,7 @@
       try { line.msg += ' ' + (typeof line.data === 'string' ? line.data : JSON.stringify(line.data)); }
       catch (e) { line.msg += ' [data illisible]'; }
     }
+    line.msg = redact(line.msg);              // ← identifiants jamais journalisés
     entries.push(line);
     if (entries.length > MAX) entries.splice(0, entries.length - MAX);
     for (var i = 0; i < listeners.length; i++) {
@@ -54,6 +71,7 @@
   window.VLog = {
     log: log,
     text: text,
+    redact: redact,
     all: function () { return entries.slice(); },
     clear: function () { entries.length = 0; if (typeof render === 'function') render(); },
     onEntry: function (fn) { listeners.push(fn); }
