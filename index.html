@@ -82,6 +82,9 @@
       <strong>Vos identifiants restent sur cette TV</strong> : chiffrés (AES-GCM 256, clé dérivée de votre phrase
       secrète) dans le stockage local, jamais écrits dans le code, les journaux, ni publiés sur GitHub.
       Aucun proxy tiers : l'appareil parle directement à <strong>votre</strong> serveur.
+      <br><strong>Page HTTPS + panel Xtream HTTP</strong> = contenu mixte bloqué : utilisez le relais personnel
+      fourni dans <code>vidaa-relay/</code> — Serveur = <code>https://…workers.dev/k/VOTRE-CODE</code>,
+      utilisateur/mot de passe = valeurs libres (ex. « relais »), le relais injecte vos vrais identifiants côté serveur.
       Voir la section « Étapes du diagnostic » pour séparer les blocages HTTPS / CORS / authentification.
     </p>
 

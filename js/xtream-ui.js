@@ -76,7 +76,12 @@
     if (!parsed.ok) { toast('URL serveur invalide : ' + parsed.error, 'bad'); return null; }
     c = { b: parsed.base, base: parsed.base, u: c.u, p: c.p };
     st.cfg = c;
-    try { localStorage.setItem(LS_BASE, parsed.base); } catch (e) {}   // le serveur n'est pas un identifiant
+    // Le serveur seul n'est pas un identifiant… MAIS une URL de relais
+    // (/k/<code>/…) contient le code d'accès : jamais persistée en clair,
+    // exactement comme une URL Xtream. Enregistrez-la dans le coffre chiffré.
+    if (!/^\/k\//i.test(parsed.path)) {
+      try { localStorage.setItem(LS_BASE, parsed.base); } catch (e) {}
+    }
     return c;
   }
 

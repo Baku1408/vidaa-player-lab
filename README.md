@@ -68,8 +68,9 @@ téléphone sont éteints, tant que la TV a Internet.
 - **Jamais** publiés sur GitHub : le coffre et le rapport formats vivent
   uniquement dans le localStorage de la TV.
 - **Aucun proxy tiers** : la TV parle directement à **votre** serveur. Seul
-  remède CORS documenté : **votre propre relais personnel** (voir
-  `ARCHITECTURE.md`) — jamais un service tiers qui verrait vos identifiants.
+  remède CORS documenté : **votre propre relais personnel** (implémenté dans
+  `../vidaa-relay/`, déployé sur VOTRE compte Cloudflare) — jamais un service
+  tiers qui verrait vos identifiants.
 - Si le navigateur TV n'offre pas WebCrypto (page non sécurisée), le coffre
   est **refusé** : les identifiants ne sont alors valables que pour la
   session en cours, en mémoire.
@@ -104,9 +105,13 @@ Les deux offres sont **HTTPS** (indispensable) et gratuites.
 > ⚠️ **Point d'attention HTTPS ↔ Xtream HTTP** : GitHub Pages sert l'app en
 > HTTPS. Si **votre serveur Xtream est en HTTP**, le navigateur bloquera
 > l'accès (« contenu mixte ») — c'est précisément ce que l'étape 2 du
-> diagnostic détecte et explique. Options : serveur Xtream déjà en HTTPS,
-> reverse-proxy HTTPS personnel devant lui, ou héberger l'app en HTTP sur
-> votre propre machine (LAN). Le diagnostic vous dira lequel s'applique.
+> diagnostic détecte et explique. **Solution la plus simple : le relais
+> personnel** fourni dans `../vidaa-relay/` (Cloudflare Worker gratuit,
+> 5 min de déploiement, aucun outil local) : il donne à la TV une origine
+> HTTPS qui parle à votre panel HTTP, avec vos identifiants en secrets
+> Cloudflare et un code d'accès personnel. Autres options : serveur Xtream
+> déjà en HTTPS, reverse-proxy HTTPS personnel. Le diagnostic vous dira
+> lequel s'applique.
 
 ---
 
@@ -255,7 +260,7 @@ fonctionne, le pont `omi_platform` est absent hors TV (affiché, pas masqué).
 | Test reprise FAIL « timeout:playing » | Le navigateur a bloqué l'autoplay → appuyez d'abord sur ▶ manuellement puis relancez les tests |
 | HLS ne démarre pas | Journal 🟢 : cherchez `hls.js erreur` (réseau/CORS) ou `bascule` (natif défaillant) |
 | Rien ne répond à la télécommande | 🔴 → « Voir les dernières touches » : si le journal est vide, le navigateur n'émet pas `keydown` — signalez-le |
-| Xtream : « BLOCAGE CORS » | Le serveur n'autorise pas cette origine → MP4 direct testable quand même ; pour l'inventaire/HLS : **votre** relais personnel (`ARCHITECTURE.md`), pas un service tiers |
+| Xtream : « BLOCAGE CORS » | Le serveur n'autorise pas cette origine → MP4 direct testable quand même ; pour l'inventaire/HLS : **votre** relais personnel (`../vidaa-relay/`), pas un service tiers |
 | Xtream : catalogue vide après verdict bon | Recliquez 🎬 Films / 📺 Séries (le diagnostic ne charge pas le catalogue automatiquement) |
 | Coffre « INDISPONIBLE » | WebCrypto absent (page non sécurisée ?) → l'app refuse de stocker les identifiants ; usage session uniquement |
 | Mot de passe oublié | « Oublier les identifiants » efface le coffre ; ressaisir les accès depuis votre panneau fournisseur |

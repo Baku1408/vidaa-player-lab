@@ -24,6 +24,7 @@
     return s
       .replace(/([?&](?:password|pass|pwd|username|user|token|auth)=)[^&\s"']+/gi, '$1•••')
       .replace(/\/(movie|series|live|downloads)\/[^\/\s"'?]+\/[^\/\s"'?]+\//gi, '/$1/•••/•••/')
+      .replace(/\/k\/[^\/\s"']+/g, '/k/•••')                 // code d'accès du relais
       .replace(/([?&]target=)[^&\s"']+/gi, '$1•••')
       .replace(/([a-z][a-z0-9+.-]*:\/\/)[^\/\s@]+@/gi, '$1•••@');
   }

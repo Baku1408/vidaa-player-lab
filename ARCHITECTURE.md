@@ -62,17 +62,26 @@ lecture). La limite : pas d'inventaire ni de HLS (XHR). À utiliser si votre
 fournisseur bloque l'API mais ouvre les fichiers.
 
 ### Option 2 — VOTRE propre relais (aucun tiers, aucun collecteur)
-Si bloqué : déployer **par vous, sur VOTRE compte**, un micro-relais qui ne
-fait que :
-- accepter `POST {base, username, password, action}` depuis VOTRE domaine,
-- appeler VOTRE panneau Xtream côté serveur,
-- renvoyer le JSON **sans journaliser identifiants ni requêtes**.
+**Implémenté** : `../vidaa-relay/worker.js` (Cloudflare Worker, plan gratuit,
+déploiement 100 % tableau de bord — voir `../vidaa-relay/README.md`).
+Principes garantis dans le code :
+- origine amont **fixe** (jamais d'URL cible acceptée du client → pas de
+  proxy ouvert) ;
+- code d'accès personnel dans le chemin (`/k/<code>/…`), comparaison à temps
+  constant, `403` sinon ;
+- identifiants Xtream injectés **côté serveur** depuis les secrets Cloudflare
+  — ils ne transitent jamais par la TV ;
+- journaux : type d'appel + statut **uniquement** (ni identifiants, ni code,
+  ni URL amont) ;
+- médias **streamés** (jamais bufferisés) avec préservation du Range/seek ;
+  playlists HLS : origines amont réécrites vers le relais.
 
-Implémentations acceptables (toutes sous **votre** contrôle) :
-- **Cloudflare Worker gratuit** déployé depuis **votre** compte (code lisible,
-  déployé par vous — ce n'est PAS un service tiers) ;
-- un petit service sur un **NAS/Box/VPS personnel** toujours allumé (le PC
-  doit pouvoir être éteint).
+Testé localement contre le mock (`tools/relay_sim.py` rejoue le contrat à la
+lettre) : diagnostic 6/6, MP4 lu avec seek 206 byte-exact, HLS relayé, MKV en
+échec honnête, zéro fuite dans les journaux.
+
+Alternative (même contrat, votre matériel) : un petit reverse proxy HTTPS sur
+un NAS/Box/VPS toujours allumé (le PC doit pouvoir être éteint).
 
 > ⚠️ **Signalé clairement** : ce relais est techniquement un proxy. La
 > différence avec un « proxy public » est décisive : le code est **le vôtre**,
